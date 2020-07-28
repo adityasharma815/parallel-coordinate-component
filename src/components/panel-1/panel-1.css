@@ -1,0 +1,28 @@
+/* @import "./material-icons.css"; */
+@import '../../../node_modules/materialize-css/dist/css/materialize.min.css';
+@import '../../../node_modules/material-icons-css/css/material-icons.css';
+
+#mySidenav .collapsible {
+  border: none;
+}
+#mySidenav .collapsible .collapsible-header {
+  background-color: transparent;
+  font-size: large;
+}
+
+#mySidenav .collapsible .collapsible-body {
+  /*background-color: #ffffff3d;*/
+  padding: 1rem;
+}
+
+.information {
+  width: 17px;
+  height: 17px;
+  border-radius: 10px;
+  border: 1px solid;
+  color: black;
+  padding: 0;
+  overflow: visible;
+  background-color: transparent;
+  cursor: pointer;
+}

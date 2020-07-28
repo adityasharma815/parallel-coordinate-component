@@ -1,0 +1,167 @@
+@import '../../../node_modules/materialize-css/dist/css/materialize.css';
+
+
+:host {
+  display: block;
+}
+
+
+[type="checkbox"]:not(:checked), [type="checkbox"]:checked {
+  opacity: 1; 
+  pointer-events: all;
+}
+[type="radio"]:not(:checked), [type="radio"]:checked {
+  opacity: 1; 
+  pointer-events: all;
+  margin: 0px 16px;
+}
+
+.main-body {
+  display: grid;
+  box-sizing: border-box;
+  background-color: #222;
+  color: #fff;
+  width: 100%;
+  height: 100%;
+}
+.main-body > .header {
+  background: #efefef;
+  grid-row: 1 /span 1;
+  width: 100%;
+  padding: 8px;
+  background: linear-gradient(to right, #6f0000, #200122);
+  font-family: 'Arial';
+  color: #ffffff;
+}
+
+.main-body > .header > .header-exclude-btn {
+  float: left;
+}
+.main {
+  display: grid;
+  grid-template-columns: 20% 80%;
+  grid-row: 2 / 3
+ 
+}
+.main > .main-left-panel {
+  grid-column: 1 / 2;
+}
+
+.main > .main-right-panel{
+  max-width: 100%;
+  grid-column: 2 / span 3;
+  border-left: 2px solid #000;
+
+}
+
+.main > .header > button {
+  float: left;
+}
+.main-body > .footer {
+  border: 2px solid tomato;
+}
+
+.collapsible {
+  border: none;
+}
+.collapsible .collapsible-header {
+  background-color: transparent;
+  font-size: large;
+}
+
+.collapsible .collapsible-body {
+  /*background-color: #ffffff3d;*/
+  padding: 1rem;
+}
+
+.information {
+  width: 17px;
+  height: 17px;
+  border-radius: 10px;
+  border: 1px solid;
+  color: black;
+  padding: 0;
+  overflow: visible;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+
+canvas,
+svg {
+  position: absolute;
+  top: 100;
+}
+.axis text.label {
+  font-size: 12px;
+  cursor: move;
+  padding-bottom: 24px;
+  fill: #ddd;
+}
+body {
+  font: small Arial;
+  background-color: #353535;
+  color: white;
+  overflow-x: hidden;
+  line-height: 1.4em;
+  /* background: #f7f7f7; */
+  /* color: #404040; */
+}
+.hide {
+  display: none !important;
+}
+.axisActive .label,
+.axisActive td {
+  fill: #5ae !important;
+  color: #5ae;
+}
+.w-30 {
+  width: 100%;
+  float: left;
+}
+.w-70 {
+  width: 70%;
+  float: left;
+}
+.w-50 {
+  width: auto;
+  float: left;
+}
+.w-100 {
+  width: 100%;
+  padding: 8px;
+}
+.fillbar {
+  height: 12px;
+  line-height: 12px;
+  border: 1px solid rgba(120, 120, 120, 0.5);
+  width: 120px;
+  display: inline-block;
+}
+#rendered-bar,
+#selected-bar {
+  width: 0%;
+  font-weight: bold;
+}
+#rendered-bar {
+  background: #dc9c9c;
+  border-right: 1px solid #666;
+}
+#selected-bar {
+  background: rgba(160, 160, 160, 0.5);
+  border-right: 1px solid #999;
+}
+.top-bar {
+  text-align: right;
+  margin-bottom: 20px;
+}
+.text-right {
+  text-align: right;
+}
+button#exclude-data {
+  font-weight: bold;
+}
+
+button#exclude-data:hover {
+  color: #900;
+}
