@@ -3,6 +3,7 @@ import {
   ComponentInterface,
   h,
   Element,
+  State,
   Prop,
   Watch,
   Host,
@@ -25,7 +26,8 @@ export class ParallelCoordinates implements ComponentInterface {
   @Prop()
   completeData: Array<Object>;
   @Element() element: HTMLElement;
-
+  @State() isSearchExpanded: boolean = false;
+  @State() isSettingExpanded: boolean = true;
   yscale: any = {};
   mains = main();
   settings = setting();
@@ -122,20 +124,35 @@ export class ParallelCoordinates implements ComponentInterface {
         </div>
         <div class="w-100 main">
         <div class='main-left-panel' id='main-left-panel'>
-          <div class="w-30 ">
-            <div class="w-100">
-              <div>
-                <input
-                  type="text"
-                  id="search"
-                  placeholder="Search host e.g compute-1-1"
-                />
-              </div>
-              <div>
-                <ul id="compute-list"></ul>
-              </div>
+        <ul id="leftpanel" class="collapsible">
+        <li class="searchPanel">
+          <div class="w-100">
+            <div class="collapsible-header search-wrapper focused">
+                <input type="text" id="search" placeholder="Search host e.g compute-1-1"  onClick={() =>
+                    (this.isSearchExpanded = !this.isSearchExpanded)
+                  }></input>
+                <i class="material-icons" >search</i>
             </div>
-            <div class="w-100">
+            <div class="collapsible-body" style={{ display: this.isSearchExpanded ? "block" : "none" }}>
+                    <ul id="compute-list">
+                    </ul>
+            </div>
+          </div>
+        </li>
+          <li class="active">
+          <div
+                class="collapsible-header"
+                onClick={() => {
+                  this.isSettingExpanded = !this.isSettingExpanded;
+                }}
+              >
+                <i class="material-icons">settings</i> Setting
+              </div>
+              <div
+                class="collapsible-body"
+                style={{ display: this.isSettingExpanded ? "block" : "none" }}
+              >
+          
               <table
                 class="table table-striped table-hover row s12"
                 id="axisSetting"
@@ -150,8 +167,14 @@ export class ParallelCoordinates implements ComponentInterface {
                 <tbody></tbody>
               </table>
             </div>
+          </li>
+          
+            
+            
+          
+          </ul>
           </div>
-          </div>
+
           <div class="main-right-panel" id="main-right-panel" >
           <div class="w-70" id="Maincontent">
             <div id="chart">

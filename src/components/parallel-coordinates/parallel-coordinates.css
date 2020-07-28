@@ -1,6 +1,7 @@
+@import url(https://fonts.googleapis.com/icon?family=Material+Icons);
+@import url(https://fonts.googleapis.com/icon?family=Material+Icons);
 @import '../../../node_modules/materialize-css/dist/css/materialize.css';
-
-
+@import '../../../node_modules/material-icons-css/css/material-icons.css';
 :host {
   display: block;
 }
@@ -164,4 +165,8 @@ button#exclude-data {
 
 button#exclude-data:hover {
   color: #900;
+}
+
+#compute-list> li.rack> .collapsible-body {
+  display: block;
 }

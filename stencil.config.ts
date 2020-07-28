@@ -2,6 +2,7 @@ import { Config } from '@stencil/core';
 
 export const config: Config = {
   namespace: 'stencilvisualizationcomp',
+  globalStyle: 'src/assets/global/global.css',
   taskQueue: 'async',
   outputTargets: [
     {
