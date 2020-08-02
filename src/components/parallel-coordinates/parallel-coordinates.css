@@ -33,7 +33,33 @@
   background: linear-gradient(to right, #6f0000, #200122);
   font-family: 'Arial';
   color: #ffffff;
+  grid-template-columns: 20% 80%;
+  display: grid;
 }
+.main-body > .header > .header-left{
+  grid-column: 1;
+  margin: 0;
+  position: absolute;
+}
+
+.main-body > .header > .header-right{
+  grid-column: 2;
+  display: flex;
+  justify-content: flex-end;
+}
+.main-body > .header > .header-right div{
+  float: left;
+}
+.main-body > .header > .header-right div.overlayPlot{
+  float: left;
+  display: inline-flex;
+}
+
+.main-body > .header > .header-right div.overlayPlot select {
+  display: block;
+  height: auto;
+}
+
 
 .main-body > .header > .header-exclude-btn {
   float: left;

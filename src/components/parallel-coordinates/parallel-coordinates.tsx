@@ -45,14 +45,21 @@ export class ParallelCoordinates implements ComponentInterface {
     ).remove();
 
     if (this.completeData != undefined) {
-      let serviceFullList_withExtra = this.settings.getServiceFLE();
-      this.mains.initFunc(
+      let csvObj = {
+        id: "csvEmploymentRate",
+        name: "US employment rate data - percentage",
+        url: "./data/sampleData.csv",
+        description: "",
+        date: "1 Jan 1999",
+        group: "sample",
+        separate: "-",
+        formatType: "csv",
+      };
+      this.mains.readFilecsv(
         this.completeData,
-        serviceFullList_withExtra,
-        elementsObj,
-        this.brushCompleted
+        "-",
+        csvObj
       );
-      // this.brushCompletedHandler("Amith");
     }
   }
 
@@ -68,76 +75,63 @@ export class ParallelCoordinates implements ComponentInterface {
         elementsObj
       );
     }
-    // let fulldata = this;
-    // d3.csv("./data/sampleData.csv").then(function (data) {
-    //   data = data.slice(0, 66);
-    //   data.forEach((d) => {
-    //     d.Time = new Date(
-    //       d3.timeFormat("%a %b %d %X CDT %Y")(
-    //         new Date(+d.Time ? +d.Time : d.Time.replace("Z", ""))
-    //       )
-    //     );
-    //     for (const property in d) {
-    //       if (
-    //         property != "Time" &&
-    //         property != "compute" &&
-    //         property != "group" &&
-    //         property != "id" &&
-    //         property != "name" &&
-    //         property != "rack"
-    //       )
-    //         d[property] = JSON.parse(d[property]);
-    //     }
-    //   });
-    //   fulldata.completedata = data;
-    // });
   }
-  // componentWillLoad() {
-  //   debugger;
-  //   this.watchCompleteData();
-  // }
-  render() {
+    render() {
     return (
       <Host>
         <div class="main-body">
         <div class="w-100 top-bar text-right header">
-          <button title="Remove selected data" id="exclude-data" disabled class="header-exclude-btn">
-            Exclude
-          </button>
-          <strong id="rendered-count"></strong>/
-          <strong id="selected-count"></strong>
-          <div class="fillbar">
-            <div id="selected-bar">
-              <div id="rendered-bar">&nbsp;</div>
+          <div class="header-left">
+            <button title="Remove selected data" id="exclude-data" disabled class="header-exclude-btn">
+              Exclude
+            </button>
+          </div>
+          <div class="header-right">
+            <div>
+              <strong id="rendered-count"></strong>/
+              <strong id="selected-count"></strong>
+            </div>
+            <div class="fillbar">
+              <div id="selected-bar">
+                <div id="rendered-bar">&nbsp;</div>
+              </div>
+            </div>
+            <div>
+            Lines at <strong id="opacity"></strong> opacity.
+            </div>
+            <div class="overlayPlot">
+              <label> Show: </label>
+              <select id="overlayPlot">
+                <option value="none">None</option>
+                <option value="tick" selected>
+                  ticks
+                </option>
+                <option value="violin">Violin plots</option>
+                <option value="violin+tick">Violin plots + ticks</option>
+              </select>
             </div>
           </div>
-          Lines at <strong id="opacity"></strong> opacity.
-          <label> Show: </label>
-          <select id="overlayPlot">
-            <option value="none">None</option>
-            <option value="tick" selected>
-              ticks
-            </option>
-            <option value="violin">Violin plots</option>
-            <option value="violin+tick">Violin plots + ticks</option>
-          </select>
         </div>
         <div class="w-100 main">
         <div class='main-left-panel' id='main-left-panel'>
         <ul id="leftpanel" class="collapsible">
         <li class="searchPanel">
-          <div class="w-100">
-            <div class="collapsible-header search-wrapper focused">
-                <input type="text" id="search" placeholder="Search host e.g compute-1-1"  onClick={() =>
-                    (this.isSearchExpanded = !this.isSearchExpanded)
-                  }></input>
-                <i class="material-icons" >search</i>
+          
+            <div class="collapsible-header"
+                onClick={() => {
+                  this.isSearchExpanded = !this.isSearchExpanded;
+                }}>
+              <i class="material-icons" >source</i> Sample Source
             </div>
-            <div class="collapsible-body" style={{ display: this.isSearchExpanded ? "block" : "none" }}>
-                    <ul id="compute-list">
-                    </ul>
+            <div class="collapsible-body " style={{ display: this.isSearchExpanded ? "block" : "none" }}>
+              
+              <input type="text" id="search" placeholder="Search Sample Source" 
+               ><span class="material-icons" >search</span></input>
+                
+                <ul id="compute-list">
+                </ul>
             </div>
-          </div>
+          
         </li>
           <li class="active">
           <div
@@ -146,7 +140,7 @@ export class ParallelCoordinates implements ComponentInterface {
                   this.isSettingExpanded = !this.isSettingExpanded;
                 }}
               >
-                <i class="material-icons">settings</i> Setting
+                <i class="material-icons">settings</i> Visual Controls
               </div>
               <div
                 class="collapsible-body"

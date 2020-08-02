@@ -8,7 +8,7 @@ import Sortable from "sortablejs";
 export function main() {
   let width, height;
   let settings = setting();
-  let m = [40, 60, 10, 10],
+  let m = [100, 60, 10, 10],
     w,
     h,
     xscale,
@@ -32,7 +32,7 @@ export function main() {
 
   //legend prt
   let violiin_chart;
-  let axisPlot;
+
   let isTick = true;
   let isChangeData = false;
   var levelStep = 4;
@@ -63,6 +63,145 @@ export function main() {
   conf.serviceListattr = settings.serviceListattr;
   conf.serviceListattrnest = settings.serviceListattrnest;
 
+  let separate;
+  let serviceList = [];
+  let serviceLists = [];
+  let serviceListattr = [];
+  let serviceAttr = {};
+  let hostList = { data: { hostlist: {} } };
+  var serviceQuery = {
+    nagios_old: [
+      "temperature",
+      "cpu+load",
+      "memory+usage",
+      "fans+health",
+      "power+usage",
+    ],
+    nagios: {
+      Temperature: {
+        format: (d) => `CPU${d} Temp`,
+        numberOfEntries: 2,
+        type: "json",
+        query: "CPU_Temperature",
+      },
+      Job_load: {
+        format: () => "cpuusage",
+        numberOfEntries: 1,
+        type: "json",
+        query: "CPU_Usage",
+      },
+      Memory_usage: {
+        format: () => "memoryusage",
+        numberOfEntries: 1,
+        type: "json",
+        query: "Memory_Usage",
+        rescale: 1 / 191.908,
+      },
+      Fans_speed: {
+        format: (d) => `FAN_${d}`,
+        numberOfEntries: 4,
+        type: "json",
+        query: "Fan_Speed",
+      },
+      Power_consum: {
+        format: () => "powerusage_watts",
+        numberOfEntries: 1,
+        type: "json",
+        query: "Node_Power_Usage",
+        rescale: 1 / 3.2,
+      },
+    },
+    influxdb: {
+      Temperature: {
+        CPU_Temperature: {
+          format: (d) => `CPU${d} Temp`,
+          numberOfEntries: 2,
+        },
+        Inlet_Temperature: {
+          format: () => `Inlet Temp`,
+          numberOfEntries: 1,
+        },
+      },
+      Job_load: {
+        CPU_Usage: {
+          format: () => "cpuusage(load)",
+          format2: () => "cpuusage",
+          numberOfEntries: 1,
+        },
+      },
+      Memory_usage: {
+        Memory_Usage: {
+          format: () => "memoryusage",
+          numberOfEntries: 1,
+          rescale: 100 / 191.908,
+        },
+      },
+      Fans_speed: {
+        Fan_Speed: {
+          format: (d) => `FAN_${d}`,
+          numberOfEntries: 4,
+        },
+      },
+      Power_consum: {
+        Node_Power_Usage: {
+          format: () => "powerusage_watts",
+          numberOfEntries: 1,
+          rescale: 1 / 3.2,
+        },
+      },
+      Job_scheduling: {
+        Job_Info: {
+          format: () => "job_data",
+          mainkey: "jobID",
+          numberOfEntries: 1,
+          type: "object",
+        },
+      },
+    },
+  };
+  var serviceList_selected = [
+    { text: "Temperature", index: 0 },
+    { text: "Job_load", index: 1 },
+    { text: "Memory_usage", index: 2 },
+    { text: "Fans_speed", index: 3 },
+    { text: "Power_consum", index: 4 },
+  ];
+  var serviceListattrnest = [
+    { key: "arrTemperature", sub: ["CPU1 Temp", "CPU2 Temp", "Inlet Temp"] },
+    { key: "arrCPU_load", sub: ["Job load"] },
+    { key: "arrMemory_usage", sub: ["Memory usage"] },
+    {
+      key: "arrFans_health",
+      sub: ["Fan1 speed", "Fan2 speed", "Fan3 speed", "Fan4 speed"],
+    },
+    { key: "arrPower_usage", sub: ["Power consumption"] },
+  ];
+  var serviceFullList;
+  var scaleService;
+  var sampleS;
+  var tsnedata;
+  var hosts;
+  var hostResults;
+  var serviceFullList_Fullrange;
+  var serviceFullList_withExtra;
+  var processResult;
+  var dataInformation = {
+    filename: "",
+    size: 0,
+    timerange: [],
+    interval: "",
+    totalstep: 0,
+    hostsnum: 0,
+    datanum: 0,
+  };
+  var axisPlot;
+  width = Math.round(Number(width));
+
+  height = d3.max([document.body.clientHeight - 150, 300]);
+  w = width - m[1] - m[3];
+  h = height - m[0] - m[2];
+  xscale = d3.scalePoint().range([0, w]).padding(0.3);
+  // FIXME detect format
   //   let foreground = this.element.shadowRoot.querySelectorAll("#foreground")[0];
   //   let highlighted = this.element.shadowRoot.querySelectorAll("#highlight")[0];
   //   let background = this.element.shadowRoot.querySelectorAll("#background")[0];
@@ -78,16 +217,6 @@ export function main() {
   let barw = 300;
   let barScale = d3.scaleLinear();
   let db = "nagios";
-
-  let dataInformation = {
-    filename: "",
-    size: 0,
-    timerange: [],
-    interval: "",
-    totalstep: 0,
-    hostsnum: 0,
-    datanum: 0,
-  };
 
   //var arrColor = ['#00c', '#1a9850','#fee08b', '#d73027'];
   // var arrColor = ['#110066','#4400ff', '#00cccc', '#00dd00','#ffcc44', '#ff0000', '#660000'];
@@ -137,16 +266,14 @@ export function main() {
       for (let i = 0; i < comlength; i++) {
         let eachIn = {};
         let validkey = true;
-        settings.serviceListattrnest.forEach((s) => {
+        serviceListattrnest.forEach((s) => {
           s.sub.forEach((sub, sj) => {
             eachIn[sub] = com.value[s.key][i][sj];
           });
         });
         if (validkey) {
-          eachIn[settings.stickKey] =
-            settings.stickKey === settings.TIMEKEY
-              ? ob.timespan[i]
-              : ob.timespan.length - 1 - i;
+          eachIn[stickKey] =
+            stickKey === TIMEKEY ? ob.timespan[i] : ob.timespan.length - 1 - i;
           eachIn.rack = ishpcc ? "Rack " + rack : rack;
           eachIn.compute = com.key;
           eachIn.group = ishpcc ? "Rack " + rack : rack;
@@ -154,7 +281,7 @@ export function main() {
             ? com.value["arrcluster"][i]
             : 0;
           eachIn.name =
-            com.key + ", " + settings.stickKeyFormat(eachIn[settings.stickKey]);
+            com.key + ", " + stickKeyFormat(eachIn[settings.stickKey]);
           eachIn.id = com.key + "-" + count;
           count++;
           newdata.push(eachIn);
@@ -511,6 +638,7 @@ export function main() {
     isTick = true;
   }
   function plotViolin(allElementsObj) {
+    debugger;
     selected = shuffled_data;
     let cluster_info = [];
     let violin_w = Math.min(
@@ -527,7 +655,7 @@ export function main() {
       let dimensiondata = {};
       let vMax;
       dimensions.forEach((d) => {
-        let s = settings.serviceFullList.find((s) => s.text === d);
+        let s = serviceFullList.find((s) => s.text === d);
         let color = () => "#ffffff";
         if (s) {
           let value = [];
@@ -578,6 +706,7 @@ export function main() {
   }
   function onChangeOfShow(allElementsObj) {
     axisPlot = d3.select(allElementsObj.overlayPlot).on("change", function () {
+      debugger;
       switch ($(this).val()) {
         case "none":
           d3.selectAll(
@@ -621,13 +750,62 @@ export function main() {
     });
   }
 
-  function initFunc(
-    sampleS,
-    serviceFullList_withExtra,
-    allElementsObj,
-    brushCompleted
-  ) {
-    debugger;
+  function initializeD3Elements() {
+    let allElem = myServicee.getCanvusElements();
+    axisPlot = d3.select(allElem.overlayPlot);
+    width = d3
+      .select(allElem.element.shadowRoot.querySelectorAll(".main-right-panel")[0])
+      // get the width of div element
+      .style("width")
+      // take of 'px'
+      .slice(0, -2);
+    // return as an integer
+    width = Math.round(Number(width));
+
+    height = d3.max([document.body.clientHeight - 150, 300]);
+    w = width - m[1] - m[3];
+    h = height - m[0] - m[2];
+    xscale = d3.scalePoint().range([0, w]).padding(0.3);
+    axis = d3.axisLeft().ticks(1 + height / 50); // vertical axis with the scale
+    // Scale chart and canvas height
+    let chart = d3
+      .select(allElem.chart)
+      .style("height", h + m[0] + m[2] + "px");
+
+    chart
+      .selectAll("canvas")
+      .attr("width", w)
+      .attr("height", h)
+      .style("padding", m.join("px ") + "px");
+
+    // Foreground canvas for primary view
+    // let foreground = document.querySelector("#foreground").getContext("2d");
+    foreground = allElem.foreground;
+    foreground = foreground.getContext("2d");
+    foreground.globalCompositeOperation = "destination-over";
+    foreground.strokeStyle = "rgba(0,100,160,0.1)";
+    foreground.lineWidth = 1.7;
+    // foreground.fillText("Loading...",w/2,h/2);
+
+    // Highlight canvas for temporary interactions
+    highlighted = allElem.highlighted;
+    highlighted = highlighted.getContext("2d");
+    highlighted.strokeStyle = "rgba(0,100,160,1)";
+    highlighted.lineWidth = 4;
+
+    // Background canvas
+    background = allElem.background;
+    background = background.getContext("2d");
+    background.strokeStyle = "rgba(0,100,160,0.1)";
+    background.lineWidth = 1.7;
+
+    svg = d3
+      .select(allElem.chart)
+      .select("svg")
+      .attr("width", width)
+      .attr("height", height)
+      .append("svg:g")
+      .attr("transform", "translate(" + m[3] + "," + m[0] + ")");
 
     // d3.viiolinplot = viiolinplot;
     violiin_chart = viiolinplot().graphicopt({
@@ -645,26 +823,38 @@ export function main() {
       ticks: { "stroke-width": 0.5 },
       tick: { visibile: false },
     });
+    onChangeOfShow(allElem);
+    d3.select(
+      allElem.element.shadowRoot.querySelectorAll("#exclude-data")[0]
+    ).on("click", exclude_data);
+  }
+
+  function initFunc(
+    sampleS,
+    serviceFullList_withExtra,
+    allElementsObj,
+    brushCompleted
+  ) {
+    debugger;
+
     serviceFullList_withExtraa = serviceFullList_withExtra;
     let allElem = myServicee.getCanvusElements();
     drawFiltertable(serviceFullList_withExtra, allElem);
-    onChangeOfShow(allElementsObj);
+
     // setColorsAndThresholds("CPU1 Temp", serviceFullList_withExtra);
     dimensions = [];
     timel;
     if (timel) timel.stop();
-    d3.select(
-      allElem.element.shadowRoot.querySelectorAll("#exclude-data")[0]
-    ).on("click", exclude_data);
+
     width = d3
-      .select(allElem.element.shadowRoot.querySelectorAll("#main-right-panel")[0])
+      .select(allElem.element.shadowRoot.querySelectorAll("#Maincontent")[0])
       // get the width of div element
       .style("width")
       // take of 'px'
       .slice(0, -2);
     // return as an integer
     width = Math.round(Number(width));
-    console.log("CLinet Heignt ", document.body.clientHeight)  
+
     height = d3.max([document.body.clientHeight - 150, 300]);
     w = width - m[1] - m[3];
     h = height - m[0] - m[2];
@@ -820,6 +1010,7 @@ export function main() {
     }
     data = new_data;
     rescale();
+    complex_data_table(data, true);
   }
   function actives() {
     let actives = [],
@@ -1069,6 +1260,7 @@ export function main() {
         return lir;
       });
       function updateComtime(p) {
+        debugger;
         let lit = p
           .select("ul")
           .datum((d) => d.values)
@@ -1094,19 +1286,31 @@ export function main() {
         });
         return p;
       }
-      // $("#compute-list.collapsible,#compute-list .collapsible").collapsible({
-      //   onOpenStart: function (evt) {
-      //     if (d3.select(evt).classed("compute"))
-      //       d3.select(evt).call(updateComtime);
-      //   },
+      // $("#compute-list.collapsible,#compute-list .collapsible").click(function (
+      //   evt
+      // ) {
+      //   debugger;
+      //   if (d3.select(evt).classed("compute"))
+      //     d3.select(evt).call(updateComtime);
       // });
 
-      d3.select(
-        allElem.element.shadowRoot.querySelectorAll("li.compute")[0]
-      ).call(updateComtime);
+      // d3.select(
+      //   allElem.element.shadowRoot.querySelectorAll("li.compute")[0]
+      // ).call(updateComtime);
 
+      d3.selectAll(allElem.element.shadowRoot.querySelectorAll("li.compute"))
+        // .filter((d) => {
+        //   debugger;
+        //   return d.classed("compute");
+        // })
+        .call(updateComtime);
+        // document.querySelector('my-component').shadowRoot.querySelector('parallel-coordinates').shadowRoot.querySelector('#leftpanel li .collapsible.rack li').click(function(evt){
+        //   console.log('SHow Ebt',evt.target)
+        // })
+        // document.querySelector('my-component').shadowRoot.querySelector('parallel-coordinates').shadowRoot.querySelector('#leftpanel li').click(function(evt){
+        //   console.log('SHow Ebt',evt.target)
+        // })
       complex_data_table_render = false;
-      
     }
   }
   function highlight(d) {
@@ -1225,7 +1429,6 @@ export function main() {
     if (isChangeData) axisPlot.dispatch("plot", selected);
   }
   function render_stats(i, n, render_speed) {
-    debugger;
     let allElem = myServicee.getCanvusElements();
 
     d3.select(
@@ -1363,6 +1566,7 @@ export function main() {
 
   let listOption = [];
   function drawFiltertable(serviceFullList_withExtra, allElem) {
+    debugger;
     listOption = serviceFullList_withExtra.map((e, ei) => {
       return {
         service: e.text,
@@ -1402,11 +1606,18 @@ export function main() {
             ])
             .enter()
             .append("td");
+          let trCount = 0;
           alltr
             .filter((d) => d.type === "radio")
             .append("input")
             .attrs(function (d, i) {
+              trCount = trCount + 1;
               const pdata = d3.select(this.parentElement.parentElement).datum();
+              // if (trCount == 1)
+              //   changeVar(
+              //     d3.select(this.parentElement.parentElement).datum(),
+              //     serviceFullList_withExtra
+              //   );
               return {
                 type: "radio",
                 name: "colorby",
@@ -1484,6 +1695,7 @@ export function main() {
             });
         }
       );
+
     listMetric = Sortable.create(
       allElem.element.shadowRoot.querySelectorAll("tbody")[0],
       {
@@ -1571,7 +1783,7 @@ export function main() {
         }
       );
     }
-    // if (isTick) show_ticks();
+    if (isTick) show_ticks(allElem);
 
     // update axes
     d3.selectAll(
@@ -1743,9 +1955,455 @@ export function main() {
         .range(arrColor)
         .interpolate(d3.interpolateHcl); //interpolateHsl interpolateHcl interpolateRgb
   }
+  let firstTime;
+  function readFilecsv(data, separate, object) {
+    debugger;
+    separate = separate || "|";
+    firstTime = true;
+
+    function loadcsv(data) {
+      db = "csv";
+      newdatatoFormat_noSuggestion(data, separate);
+      if (object.customTime) {
+        stickKey = object.customTime.label;
+        stickKeyFormat = object.customTime.format;
+      } else {
+        stickKey = TIMEKEY;
+        stickKeyFormat = TIMEFORMAT;
+      }
+      serviceListattrnest = serviceLists.map((d) => ({
+        key: d.text,
+        sub: d.sub.map((e) => e.text),
+      }));
+//      selectedService = serviceLists[0].text;
+      inithostResults();
+      formatService(true);
+      processResult = processResult_csv;
+
+      // addDatasetsOptions()
+
+      // MetricController.axisSchema(serviceFullList, true).update();
+      firstTime = false;
+      // realTimesetting(false, "csv", true, sampleS);
+      updateDatainformation(sampleS["timespan"]);
+
+      // preloader(true, 0, "File loaded: " + Math.round(evt.loaded/evt.total*100)+'%');
+
+      if (!firstTime) {
+        resetRequest();
+      } else {
+        initFunc();
+      }
+      initFunc = false;
+    }
+    loadcsv(data);
+  }
+  function newdatatoFormat_noSuggestion(data, separate) {
+    debugger;
+    separate = separate || "-";
+    serviceList = [];
+    serviceLists = [];
+    serviceListattr = [];
+    serviceAttr = {};
+    hostList = { data: { hostlist: {} } };
+    // FIXME detect format
+    const variables = _.without(Object.keys(data[0]), "timestamp", "time");
+    data.forEach((d) =>
+      variables.forEach((k) => (d[k] = d[k] === "" ? null : +d[k]))
+    ); // format number
+    // test sepatate
+
+    if (variables.find((k) => k.split(separate).length > 1) === undefined)
+      separate = "-";
+
+    let keys = {};
+    variables.forEach((k, ki) => {
+      let split_string = k.split(separate);
+      const nameh = split_string.shift();
+      hostList.data.hostlist[nameh] = {
+        rack: 1, //nameh.split('.')[2],
+        node: 1, //.split('.')[3],
+        id: nameh,
+      };
+      let currentkey = split_string.join(separate);
+      // const keys_replace =Object.keys(basic_service).map(k=>extractWordsCollection(getTermsArrayCollection(k),currentkey,k)).filter(d=>Object.keys(d).length);
+      if (!keys[currentkey]) keys[currentkey] = { r: undefined, vi: [] };
+      // if (keys_replace.length)
+      //     keys[currentkey].r = Object.keys(keys_replace[0])[0]||0;
+      keys[currentkey].vi.push(ki);
+    });
+    // check unionkeys
+    d3.keys(hostList.data.hostlist).forEach((hname) => {
+      Object.keys(keys).forEach((k, i) => {
+        if (data.columns.find((c) => c === hname + separate + k) === undefined)
+          delete keys[k];
+      });
+    });
+
+    serviceQuery["csv"] = serviceQuery["csv"] || {};
+
+    let validAxis = 0;
+    Object.keys(keys).forEach((k, i) => {
+      serviceQuery["csv"][k] = {};
+      serviceQuery["csv"][k][k] = {
+        type: "number",
+        format: () => k,
+        numberOfEntries: 1,
+      };
+      serviceAttr[k] = {
+        key: k,
+        val: [k],
+      };
+      serviceList.push(k);
+      serviceListattr.push(k);
+      let range = [+Infinity, -Infinity];
+      keys[k].vi.forEach((vi) => {
+        let temprange = d3.extent(data, (d) => d[variables[vi]]);
+        if (temprange[0] < range[0]) range[0] = temprange[0];
+        if (temprange[1] > range[1]) range[1] = temprange[1];
+      });
+      // let range = d3.extent(data,d=>d[variables[i]]);
+      if (keys[k].r) {
+        let suggest_range = serviceLists_or.find((d) => d.text === keys[k].r)
+          .sub[0].range;
+        if (suggest_range[0] <= range[0] && suggest_range[1] >= range[1])
+          range = suggest_range;
+      }
+      if (range[0] !== range[1]) {
+        validAxis++;
+      } else {
+        singleDataAxis.push(i);
+      }
+      const temp = {
+        text: k,
+        id: i,
+        enable: range[0] !== range[1],
+        sub: [
+          {
+            text: k,
+            id: 0,
+            enable: true,
+            idroot: i,
+            angle: (i * 2 * Math.PI) / Object.keys(keys).length,
+            range: range,
+          },
+        ],
+      };
+      thresholds.push(range);
+      serviceLists.push(temp);
+    });
+    serviceList_selected = serviceList.map((d, i) => {
+      return { text: d, index: i };
+    });
+    serviceFullList = settings.serviceLists2serviceFullList(serviceLists);
+    scaleService = serviceFullList.map((d) => d3.scaleLinear().domain(d.range));
+    let currentValidAxis = 0;
+    serviceFullList.forEach((d) => {
+      d.enable = d.range[0] !== d.range[1];
+      if (d.enable) {
+        d.angle = (currentValidAxis * 2 * Math.PI) / validAxis;
+        currentValidAxis++;
+      } else d.angle = 0;
+    });
+    const host_name = Object.keys(hostList.data.hostlist);
+    sampleS = {};
+    tsnedata = {};
+    sampleS["timespan"] = data.map((d) => new Date(d.time || d.timestamp));
+    data.forEach((d) => {
+      host_name.forEach((h) => {
+        serviceListattr.forEach((attr, i) => {
+          if (sampleS[h] === undefined) {
+            sampleS[h] = {};
+            tsnedata[h] = [];
+          }
+          sampleS[h][attr] = sampleS[h][attr] || [];
+          let currentIndex = sampleS[h][attr].length;
+          if (tsnedata[h][currentIndex] === undefined) {
+            tsnedata[h][currentIndex] = [];
+            tsnedata[h][currentIndex].name = h;
+            tsnedata[h][currentIndex].timestep = currentIndex;
+          }
+          let retievedData = processResult_csv(d[h + separate + attr], attr);
+          // let retievedData = d[h+separate+attr];
+          sampleS[h][attr].push(retievedData);
+          tsnedata[h][currentIndex].push(
+            retievedData[0] === null ? 0 : scaleService[i](retievedData[0]) || 0
+          );
+        });
+      });
+    });
+  }
+  function processResult_csv(r, serviceName) {
+    return processData_csv(r, serviceName);
+  }
+  function processData_csv(result, serviceName) {
+    const serviceAttribute = serviceQuery[db][serviceName];
+    const query_return = d3.keys(serviceAttribute);
+    if (result !== undefined) {
+      let val = result;
+      return d3.merge(
+        query_return.map((s, i) => {
+          if (
+            (val != null && val[i] != undefined) ||
+            (val != undefined && i === 0)
+          ) {
+            // no error
+            const subob = val;
+            if (serviceAttribute[s].type === "number") return [+subob];
+            else if (
+              subob.error === "None" ||
+              subob.error === null ||
+              serviceAttribute[s].type === "object"
+            )
+              return d3.range(serviceAttribute[s].numberOfEntries).map((d) => {
+                const localVal =
+                  subob[serviceAttribute[s].format(d + 1)] ||
+                  (serviceAttribute[s].format2 &&
+                    subob[serviceAttribute[s].format2(d + 1)]);
+                if (localVal != null && localVal != undefined) {
+                  if (serviceAttribute[s].type === "object")
+                    return string2JSON(localVal);
+                  return localVal * (serviceAttribute[s].rescale || 1);
+                } else return undefined;
+              });
+            else
+              return d3
+                .range(serviceAttribute[s].numberOfEntries)
+                .map((d) => undefined);
+          } else {
+            return d3
+              .range(serviceAttribute[s].numberOfEntries)
+              .map((d) => undefined);
+          }
+        })
+      );
+    }
+    return d3.merge(
+      query_return.map((s, i) => {
+        return d3
+          .range(serviceAttribute[s].numberOfEntries)
+          .map((d) => undefined);
+      })
+    );
+  }
+
+  function inithostResults(worker) {
+    hosts = [];
+    const hostdata = hostList.data.hostlist;
+    hostResults = {};
+    for (var att in hostdata) {
+      var h = {};
+      h.name = att;
+      h.hpcc_rack = hostdata[att].rack
+        ? hostdata[att].rack
+        : +att.split("-")[1];
+      h.hpcc_node = hostdata[att].node
+        ? hostdata[att].node
+        : +att.split("-")[2].split(".")[0];
+      h.index = hosts.length;
+
+      // to contain the historical query results
+      if (!worker) {
+        hostResults[h.name] = {};
+        hostResults[h.name].index = h.index;
+        hostResults[h.name].arr = [];
+        serviceListattr.forEach((d) => (hostResults[att][d] = []));
+      }
+      hosts.push(h);
+    }
+    hostResults.timespan = [];
+    hosts.sort((a, b) => {
+      var rackx = a.hpcc_rack;
+      var racky = b.hpcc_rack;
+      var x = a.hpcc_node;
+      var y = b.hpcc_node;
+      if (rackx !== racky) {
+        return rackx - racky;
+      } else {
+        if ((x % 2) - (y % 2)) {
+          return (y % 2) - (x % 2);
+        } else {
+          return x - y;
+        }
+      }
+    });
+  }
+  function formatService(init) {
+    serviceLists.forEach((s) => {
+      if (s.text.split("vs.").length > 1) {
+        s.enable = false;
+        s.sub[0].enable = false;
+      }
+    });
+    serviceFullList_Fullrange = _.clone(serviceFullList);
+    conf.serviceList = serviceList;
+    conf.serviceLists = serviceLists;
+    conf.serviceListattr = serviceListattr;
+    conf.serviceListattrnest = serviceListattrnest;
+    service_custom_added = [
+      {
+        text: "Time",
+        id: -1,
+        enable: true,
+        isDate: true,
+        class: "sorting_disabled",
+      },
+      {
+        text: "Cluster",
+        id: -2,
+        enable: false,
+        hide: true,
+        color: colorCluster,
+        axisCustom: {
+          ticks: 0,
+          tickFormat: (d) => `Group ${cluster_info[d].orderG + 1}`,
+          tickInvert: (d) => cluster_info.find((c) => c.name === d).index,
+        },
+      },
+    ];
+    serviceFullList_withExtra = _.flatten([
+      service_custom_added,
+      serviceFullList,
+    ]);
+    let allElem = myServicee.getCanvusElements();
+    drawFiltertable(serviceFullList_withExtra, allElem);
+  }
+  function resetRequest() {
+    debugger;
+    // Convert quantitative scales to floats
+    // animationtime = false;
+    // handle_clusterinfo();
+    // unhighlight();
+    initializeD3Elements();
+    let allElem = myServicee.getCanvusElements();
+    data = object2DataPrallel(sampleS);
+    yscale = {};
+    xscale.domain(
+      (dimensions = serviceFullList_withExtra
+        .filter(function (s) {
+          let k = s.text;
+          let xtempscale =
+            (s.isDate &&
+              (yscale[k] = d3
+                .scaleTime()
+                .domain(
+                  d3.extent(data, function (d) {
+                    return d[k];
+                  })
+                )
+                .range([h, 0]))) ||
+            (yscale[k] = d3
+              .scaleLinear()
+              // .domain(d3.extent(data, function (d) {
+              //     return +d[k];
+              // }))
+              .domain(
+                serviceFullList_withExtra.find((d) => d.text === k).range || [
+                  0,
+                  0,
+                ]
+              )
+              .range([h, 0]));
+          if (s.axisCustom) xtempscale.axisCustom = s.axisCustom;
+          return s.enable ? xtempscale : false;
+        })
+        .map((s) => s.text))
+    );
+    if(data.length > 0){
+      d3.select("#search").attr(
+        "placeholder",
+        `Search host e.g ${data[0].compute}`
+      );
+    }
+    // Add a group element for each dimension.
+    updateDimension();
+    if (serviceFullList.length > 0  && !serviceFullList.find((d) => d.text === selectedService))
+      selectedService = serviceFullList[0].text;
+    const selecteds = d3
+      .select(allElem.element.shadowRoot.querySelectorAll("#axisSetting")[0])
+      .select("tbody")
+      .selectAll("tr")
+      .filter((d) => d.arr == selectedService)
+      .select('input[type="radio"]')
+      .property("checked", true);
+      if(selecteds)
+        _.bind(selecteds.on("change"), selecteds.node())();
+    brush();
+  }
+  function updateDatainformation(timearray, filename) {
+    dataInformation.size = bytesToString(dataInformation.size);
+    dataInformation.hostsnum = hosts.length;
+    dataInformation.timerange = millisecondsToStr(
+      _.last(timearray) - timearray[0]
+    );
+    dataInformation.interval = millisecondsToStr(timearray[1] - timearray[0]);
+    dataInformation.totalstep = timearray.length;
+    dataInformation.datanum = d3.format(",.0f")(
+      dataInformation.totalstep * dataInformation.hostsnum
+    );
+    // let dataholder = d3.select("#datainformation");
+    // for (let key in dataInformation)
+    //   dataholder.select(`.${key}`).text(dataInformation[key]);
+    // if (sampleS)
+    //   d3.select(".currentDate").text(
+    //     "" + sampleS["timespan"][0].toDateString()
+    //   );
+  }
+  function bytesToString(bytes) {
+    // One way to write it, not the prettiest way to write it.
+
+    var fmt = d3.format(".0f");
+    if (bytes < 1024) {
+      return fmt(bytes) + "B";
+    } else if (bytes < 1024 * 1024) {
+      return fmt(bytes / 1024) + "kB";
+    } else if (bytes < 1024 * 1024 * 1024) {
+      return fmt(bytes / 1024 / 1024) + "MB";
+    } else {
+      return fmt(bytes / 1024 / 1024 / 1024) + "GB";
+    }
+  }
+  function millisecondsToStr(milliseconds) {
+    // TIP: to find current time in milliseconds, use:
+    // var  current_time_milliseconds = new Date().getTime();
+
+    function numberEnding(number) {
+      return number > 1 ? "s" : "";
+    }
+
+    var temp = Math.floor(milliseconds / 1000);
+    var years = Math.floor(temp / 31536000);
+    var str = "";
+    if (years) {
+      str += years + " year" + numberEnding(years);
+    }
+    //TODO: Months! Maybe weeks?
+    var days = Math.floor((temp %= 31536000) / 86400);
+    if (days) {
+      str += days + " day" + numberEnding(days) + " ";
+    }
+    var hours = Math.floor((temp %= 86400) / 3600);
+    if (hours) {
+      str += hours + " hour" + numberEnding(hours) + " ";
+    }
+    var minutes = Math.floor((temp %= 3600) / 60);
+    if (minutes) {
+      str += minutes + " minute" + numberEnding(minutes) + " ";
+    }
+    var seconds = temp % 60;
+    if (seconds) {
+      str += seconds + " second" + numberEnding(seconds) + " ";
+    }
+    if (str === "") return Math.round(milliseconds) + " ms";
+    //'just now' //or other string you like;
+    else return str;
+  }
+
+  
   let main = {
     initFunc,
     drawFiltertable,
+    readFilecsv,
   };
   return main;
 }

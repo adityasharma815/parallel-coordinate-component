@@ -375,6 +375,7 @@ function newdatatoFormat_noSuggestion (data,separate){
             });
         })
     });
+    return hostList;
 }
 function getstringQueryAll_influx (ip){
     let count = 0;

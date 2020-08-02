@@ -7,8 +7,7 @@ export function setting() {
 
   const TIMEKEY = "Time";
   const TIMEFORMAT = d3.timeFormat("%B %d %Y %H:%M");
-  let scaleService;
-  let sampleS, tsnedata;
+
   let stickKey = TIMEKEY;
   let stickKeyFormat = TIMEFORMAT;
   // system variable
@@ -326,90 +325,6 @@ export function setting() {
     [1050, 17850],
     [0, 200],
   ];
-  var serviceQuery ={
-    nagios_old: ["temperature","cpu+load" ,"memory+usage" ,"fans+health" ,"power+usage"],
-    nagios: {
-        "Temperature":{
-            format: (d)=> `CPU${d} Temp`,
-            "numberOfEntries":2,
-            "type":"json",
-            "query":"CPU_Temperature"
-        },
-        "Job_load":{
-            format: ()=> "cpuusage",
-            "numberOfEntries":1,
-            "type":"json",
-            "query":"CPU_Usage"
-        },
-        "Memory_usage":{
-            "format":()=>"memoryusage",
-            "numberOfEntries":1,
-            "type":"json",
-            "query":"Memory_Usage",
-            "rescale": 1/191.908,
-        },
-        "Fans_speed":{
-            format: (d)=> `FAN_${d}`,
-            "numberOfEntries":4,
-            "type":"json",
-            "query":"Fan_Speed"
-        },
-        "Power_consum":{
-            "format": ()=>"powerusage_watts",
-            "numberOfEntries":1,
-            "type":"json",
-            "query":"Node_Power_Usage",
-            "rescale": 1/3.2,
-        }
-    },
-    influxdb: {
-        "Temperature":{
-            "CPU_Temperature" : {
-                format: (d) => `CPU${d} Temp`,
-                "numberOfEntries": 2,
-            },
-            "Inlet_Temperature" : {
-                format: () => `Inlet Temp`,
-                "numberOfEntries": 1,
-            }
-        },
-        "Job_load":{
-            "CPU_Usage": {
-                format: () => "cpuusage(load)",
-                format2: () => "cpuusage",
-                "numberOfEntries": 1,
-            }
-        },
-        "Memory_usage":{
-            "Memory_Usage": {
-                format: () => "memoryusage",
-                "numberOfEntries": 1,
-                "rescale": 100 / 191.908,
-            }
-        },
-        "Fans_speed":{
-            "Fan_Speed" : {
-                format: (d) => `FAN_${d}`,
-                "numberOfEntries": 4,
-            }
-        },
-        "Power_consum":{
-            "Node_Power_Usage" : {
-                "format": () => "powerusage_watts",
-                "numberOfEntries": 1,
-                "rescale": 1 / 3.2,
-            }
-        },
-        "Job_scheduling":{
-            "Job_Info" : {
-                "format": () => "job_data",
-                'mainkey': 'jobID',
-                "numberOfEntries": 1,
-                "type": 'object',
-            }
-        }
-    },
-};
   function systemFormat() {
     jobList = [];
     serviceList = [
@@ -699,160 +614,6 @@ export function setting() {
     ]);
     return serviceFullList_withExtra;
   }
-
-  function processResult_csv(r,serviceName){
-
-    return processData_csv(r,serviceName);
-}
-  function processData_csv(result, serviceName) {
-    const serviceAttribute = serviceQuery[db][serviceName];
-    const query_return = d3.keys(serviceAttribute);
-    if (result!==undefined) {
-        let val = result;
-        return d3.merge(query_return.map((s, i) => {
-            if ((val!=null&&val[i]!=undefined)||(val!=undefined&&i===0)) // no error
-            {
-                const subob = val;
-                if(serviceAttribute[s].type==='number')
-                    return [+subob];
-                else if (subob.error === "None" || subob.error === null || serviceAttribute[s].type==='object')
-                    return d3.range(serviceAttribute[s].numberOfEntries).map(d => {
-                        const localVal = subob[serviceAttribute[s].format(d + 1)]||(serviceAttribute[s].format2&&subob[serviceAttribute[s].format2(d + 1)]);
-                        if (localVal != null && localVal != undefined) {
-                            if (serviceAttribute[s].type==='object')
-                                return string2JSON(localVal);
-                            return localVal * (serviceAttribute[s].rescale || 1);
-                        }
-                        else return undefined;
-                    });
-               else
-                    return d3.range(serviceAttribute[s].numberOfEntries).map(d => undefined);
-            } else {
-                return d3.range(serviceAttribute[s].numberOfEntries).map(d => undefined);
-            }
-        }));
-    }
-    return d3.merge(query_return.map((s, i) => {
-            return d3.range(serviceAttribute[s].numberOfEntries).map(d => undefined);
-    }));
-}
-  var newdatatoFormat_noSuggestion = function (data,separate){
-    separate = separate||"-";
-    serviceList = [];
-    serviceLists = [];
-    serviceListattr = [];
-    serviceAttr={};
-    hostList ={data:{hostlist:{}}};
-    // FIXME detect format
-    const variables = _.without(Object.keys(data[0]),'timestamp','time');
-//    data.forEach(d=>variables.forEach(k=>d[k] = d[k]===""?null:(+d[k]))) // format number
-    // test sepatate
-
-    if (variables.find(k=>k.split(separate).length>1)===undefined)
-        separate = "-";
-
-
-    let keys ={};
-    variables.forEach((k,ki)=>{
-        let split_string = k.split(separate);
-        const nameh = split_string.shift();
-        hostList.data.hostlist [nameh] = {
-            rack: 1,//nameh.split('.')[2],
-            node: 1,//.split('.')[3],
-            id : nameh,
-        };
-        let currentkey = split_string.join(separate);
-        // const keys_replace =Object.keys(basic_service).map(k=>extractWordsCollection(getTermsArrayCollection(k),currentkey,k)).filter(d=>Object.keys(d).length);
-        if(!keys[currentkey])
-            keys[currentkey] = {r:undefined,vi:[]};
-        // if (keys_replace.length)
-        //     keys[currentkey].r = Object.keys(keys_replace[0])[0]||0;
-        keys[currentkey].vi.push(ki)
-    });
-    // check unionkeys
-    d3.keys(hostList.data.hostlist).forEach(hname=>{
-        Object.keys(keys).forEach((k,i)=>{
-            if (data.columns.find(c=>c===hname+separate+k)===undefined)
-                delete keys[k];
-        })
-    });
-
-    serviceQuery["csv"]= serviceQuery["csv"]||{};
-
-    let validAxis = 0;
-    Object.keys(keys).forEach((k,i)=>{
-        serviceQuery["csv"][k]={};
-        serviceQuery["csv"][k][k]={
-            type : 'number',
-            format : () =>k,
-            numberOfEntries: 1};
-        serviceAttr[k] = {
-            key: k,
-            val:[k]
-        };
-        serviceList.push(k);
-        serviceListattr.push(k);
-        let range =[+Infinity,-Infinity];
-        keys[k].vi.forEach(vi=>{
-            let temprange = d3.extent(data,d=>d[variables[vi]]);
-            if (temprange[0]<range[0])
-                range[0] = temprange[0];
-            if (temprange[1]>range[1])
-                range[1] = temprange[1];
-        });
-        // let range = d3.extent(data,d=>d[variables[i]]);
-        if (keys[k].r) {
-            let suggest_range = serviceLists_or.find(d => d.text === keys[k].r).sub[0].range;
-            if (suggest_range[0]<=range[0]&&suggest_range[1]>=range[1])
-                range = suggest_range;
-        }
-        if (range[0]!==range[1]){
-            validAxis++;
-        }else{
-            singleDataAxis.push(i);
-        }
-        const temp = {"text":k,"id":i,"enable":range[0]!==range[1],"sub":[{"text":k,"id":0,"enable":true,"idroot":i,"angle":i*2*Math.PI/(Object.keys(keys).length),"range":range}]};
-        thresholds.push(range);
-        serviceLists.push(temp);
-    });
-    serviceList_selected = serviceList.map((d,i)=>{return{text:d,index:i}});
-    serviceFullList = serviceLists2serviceFullList(serviceLists);
-    scaleService = serviceFullList.map(d=>d3.scaleLinear().domain(d.range));
-    let currentValidAxis = 0;
-    serviceFullList.forEach(d=>{
-        d.enable = d.range[0]!==d.range[1];
-        if (d.enable) {
-            d.angle = currentValidAxis * 2 * Math.PI / validAxis;
-            currentValidAxis++;
-        }else
-            d.angle = 0;
-    });
-    const host_name = Object.keys(hostList.data.hostlist);
-    sampleS = {};
-    tsnedata = {};
-    sampleS['timespan'] = data.map(d=>new Date(d.time||d.timestamp))
-    data.forEach(d=>{
-        host_name.forEach(h=> {
-            serviceListattr.forEach((attr,i) => {
-                if (sampleS[h]===undefined) {
-                    sampleS[h] = {};
-                    tsnedata[h] = [];
-                }
-                sampleS[h][attr] = sampleS[h][attr]||[];
-                let currentIndex = sampleS[h][attr].length;
-                if (tsnedata[h][currentIndex]===undefined){
-                    tsnedata[h][currentIndex] = [];
-                    tsnedata[h][currentIndex].name = h;
-                    tsnedata[h][currentIndex].timestep =currentIndex;
-                }
-                let retievedData = processResult_csv(d[h+separate+attr],attr);
-                // let retievedData = d[h+separate+attr];
-                sampleS[h][attr].push(retievedData);
-                tsnedata[h][currentIndex].push(retievedData[0]===null?0:scaleService[i](retievedData[0])||0);
-            });
-        })
-    });
-}
   function processResult_influxdb(r, hostname, index, servicename) {
     let temp = {};
     if (index !== undefined) {
@@ -956,6 +717,7 @@ export function setting() {
       };
     }
   }
+
   let setting = {
     stickKey,
     stickKeyFormat,
@@ -977,8 +739,7 @@ export function setting() {
     serviceFullList_withExtra,
     getServiceFLE,
     axisHistogram,
-    newdatatoFormat_noSuggestion
-    
+    serviceLists2serviceFullList,
   };
   return setting;
 }

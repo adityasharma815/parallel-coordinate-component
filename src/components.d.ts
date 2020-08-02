@@ -6,13 +6,6 @@
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 export namespace Components {
-    interface LayoutComponent {
-        /**
-          * * Data url to fetch the csv file from. Should be relative to where the component is placed.
-         */
-        "dataUrl": any;
-        "selectedRange": Array<Object>;
-    }
     interface LeftPanel {
         "data": any;
         "selectedDataset": {
@@ -26,6 +19,20 @@ export namespace Components {
             formatType: string;
         };
     }
+    interface MyComponent {
+        /**
+          * The last name
+         */
+        "last": string;
+        /**
+          * The middle name
+         */
+        "middle": string;
+        /**
+          * The first name
+         */
+        "selectedRange": Array<Object>;
+    }
     interface ParallelCoordinates {
         "completeData": Array<Object>;
         "singleData": string;
@@ -34,17 +41,17 @@ export namespace Components {
     }
 }
 declare global {
-    interface HTMLLayoutComponentElement extends Components.LayoutComponent, HTMLStencilElement {
-    }
-    var HTMLLayoutComponentElement: {
-        prototype: HTMLLayoutComponentElement;
-        new (): HTMLLayoutComponentElement;
-    };
     interface HTMLLeftPanelElement extends Components.LeftPanel, HTMLStencilElement {
     }
     var HTMLLeftPanelElement: {
         prototype: HTMLLeftPanelElement;
         new (): HTMLLeftPanelElement;
+    };
+    interface HTMLMyComponentElement extends Components.MyComponent, HTMLStencilElement {
+    }
+    var HTMLMyComponentElement: {
+        prototype: HTMLMyComponentElement;
+        new (): HTMLMyComponentElement;
     };
     interface HTMLParallelCoordinatesElement extends Components.ParallelCoordinates, HTMLStencilElement {
     }
@@ -59,20 +66,13 @@ declare global {
         new (): HTMLSecComponentElement;
     };
     interface HTMLElementTagNameMap {
-        "layout-component": HTMLLayoutComponentElement;
         "left-panel": HTMLLeftPanelElement;
+        "my-component": HTMLMyComponentElement;
         "parallel-coordinates": HTMLParallelCoordinatesElement;
         "sec-component": HTMLSecComponentElement;
     }
 }
 declare namespace LocalJSX {
-    interface LayoutComponent {
-        /**
-          * * Data url to fetch the csv file from. Should be relative to where the component is placed.
-         */
-        "dataUrl"?: any;
-        "selectedRange"?: Array<Object>;
-    }
     interface LeftPanel {
         "data"?: any;
         "onLoadDataset"?: (event: CustomEvent<any>) => void;
@@ -87,6 +87,20 @@ declare namespace LocalJSX {
             formatType: string;
         };
     }
+    interface MyComponent {
+        /**
+          * The last name
+         */
+        "last"?: string;
+        /**
+          * The middle name
+         */
+        "middle"?: string;
+        /**
+          * The first name
+         */
+        "selectedRange"?: Array<Object>;
+    }
     interface ParallelCoordinates {
         "completeData"?: Array<Object>;
         "onBrushCompleted"?: (event: CustomEvent<Array<Object>>) => void;
@@ -96,8 +110,8 @@ declare namespace LocalJSX {
         "onTodoCompleted"?: (event: CustomEvent<Array<Object>>) => void;
     }
     interface IntrinsicElements {
-        "layout-component": LayoutComponent;
         "left-panel": LeftPanel;
+        "my-component": MyComponent;
         "parallel-coordinates": ParallelCoordinates;
         "sec-component": SecComponent;
     }
@@ -106,8 +120,8 @@ export { LocalJSX as JSX };
 declare module "@stencil/core" {
     export namespace JSX {
         interface IntrinsicElements {
-            "layout-component": LocalJSX.LayoutComponent & JSXBase.HTMLAttributes<HTMLLayoutComponentElement>;
             "left-panel": LocalJSX.LeftPanel & JSXBase.HTMLAttributes<HTMLLeftPanelElement>;
+            "my-component": LocalJSX.MyComponent & JSXBase.HTMLAttributes<HTMLMyComponentElement>;
             "parallel-coordinates": LocalJSX.ParallelCoordinates & JSXBase.HTMLAttributes<HTMLParallelCoordinatesElement>;
             "sec-component": LocalJSX.SecComponent & JSXBase.HTMLAttributes<HTMLSecComponentElement>;
         }
