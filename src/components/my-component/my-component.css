@@ -1,5 +1,4 @@
-
-:host {
+@import '../../../node_modules/material-icons/iconfont/material-icons.css';:host {
   display: block;
 } 
 .main-component {

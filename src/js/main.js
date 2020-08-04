@@ -1196,6 +1196,14 @@ export function main() {
       return this.sort(collator.compare);
     }
   };
+
+  var  handleLeftPanelCollapse = function(evt){
+    console.log('SHow Ebt',evt.target);
+    console.log(d3.select(evt.target.nextSibling).style('display') )
+    var displayVal = d3.select(evt.target.nextSibling).style('display') === 'block'? 'none': 'block';
+    d3.select(evt.target.nextSibling).style('display',displayVal)
+    console.log(displayVal)
+  }
   function complex_data_table(sample, render) {
     debugger;
     let allElem = myServicee.getCanvusElements();
@@ -1307,12 +1315,16 @@ export function main() {
         // document.querySelector('my-component').shadowRoot.querySelector('parallel-coordinates').shadowRoot.querySelector('#leftpanel li .collapsible.rack li').click(function(evt){
         //   console.log('SHow Ebt',evt.target)
         // })
-        // document.querySelector('my-component').shadowRoot.querySelector('parallel-coordinates').shadowRoot.querySelector('#leftpanel li').click(function(evt){
-        //   console.log('SHow Ebt',evt.target)
-        // })
+        document.querySelector('my-component').
+        shadowRoot.querySelector('parallel-coordinates')
+        .shadowRoot.querySelector('#leftpanel.collapsible')
+        .addEventListener('click',handleLeftPanelCollapse)
+        
       complex_data_table_render = false;
     }
   }
+
+
   function highlight(d) {
     debugger;
     let allElem = myServicee.getCanvusElements();
@@ -2398,7 +2410,93 @@ export function main() {
     //'just now' //or other string you like;
     else return str;
   }
+  function loadFile(){
+//    preloader(true);
+//    exit_warp();
+    const choice = Loaddata.data;
+    let loadclusterInfo = false;
+    var promiseQueue;
 
+        if (first||(db === 'csv'&& choice.category==='hpcc')) { //reload hostlist
+            promiseQueue = d3.json(srcpathRoot+'data/hotslist_Quanah.json').then(function (data) {
+
+                    firstTime = true;
+                    hostList = data;
+                    systemFormat();
+                    inithostResults();
+                    formatService(true);
+                    // MetricController.axisSchema(serviceFullList, true).update();
+            });
+            first = false;
+        }else{
+            promiseQueue = new Promise(function(resolve, reject){
+                resolve();
+            });
+        }
+
+        dataInformation.filename = choice.name;
+        if(choice.category==='hpcc')
+            setTimeout(() => {
+                console.time("totalTime:");
+                promiseQueue.then(d3.json(choice.url).then(function(data) {
+                        console.timeEnd("totalTime:");
+
+                        loadata1(data);
+
+                }));
+            }, 0);
+        else
+            readFilecsv(choice.url,choice.separate,choice)
+
+    function loadata1(data){
+
+        data['timespan'] = data.timespan.map(d=>new Date(d3.timeFormat('%a %b %d %X CDT %Y')(new Date(+d?+d:d.replace('Z','')))));
+        _.without(Object.keys(data),'timespan').forEach(h=>{
+            delete data[h].arrCPU_load;
+            serviceLists.forEach((s,si)=>{
+                if (data[h][serviceListattr[si]])
+                    data[h][serviceListattr[si]] = data.timespan.map((d,i)=>
+                        data[h][serviceListattr[si]][i]? data[h][serviceListattr[si]][i].slice(0,s.sub.length).map(e=>e?e:undefined):d3.range(0,s.sub.length).map(e=>undefined));
+                else
+                    data[h][serviceListattr[si]] = data.timespan.map(d=>d3.range(0,s.sub.length).map(e=>null));
+            })
+        });
+        updateDatainformation(data['timespan']);
+        // console.log(data["compute-1-26"].arrFans_health[0])
+        sampleS = data;
+
+        // make normalize data
+        tsnedata = {};
+        hosts.forEach(h => {
+            tsnedata[h.name] = sampleS.timespan.map((t, i) => {
+                let array_normalize = _.flatten(serviceLists.map(a => d3.range(0, a.sub.length).map(vi => {
+                    let v = sampleS[h.name][serviceListattr[a.id]][i][vi];
+                    return d3.scaleLinear().domain(a.sub[0].range)(v === null ? undefined: v) || 0})));
+                array_normalize.name = h.name;
+                array_normalize.timestep =i;
+                return array_normalize;
+            })});
+
+        if (choice.url.includes('influxdb')){
+            processResult = processResult_influxdb;
+            db = "influxdb";
+            realTimesetting(false,"influxdb",true,sampleS);
+        }else {
+            db = "nagios";
+            processResult = processResult_old;
+            realTimesetting(false,undefined,true,sampleS);
+        }
+
+
+        if (!init){
+            resetRequest();
+        }else
+            initFunc();
+        init = false;
+        preloader(false)
+        firstTime = false;
+    }
+}
   
   let main = {
     initFunc,

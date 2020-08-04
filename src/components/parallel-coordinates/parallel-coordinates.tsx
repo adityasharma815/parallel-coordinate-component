@@ -117,13 +117,10 @@ export class ParallelCoordinates implements ComponentInterface {
         <ul id="leftpanel" class="collapsible">
         <li class="searchPanel">
           
-            <div class="collapsible-header"
-                onClick={() => {
-                  this.isSearchExpanded = !this.isSearchExpanded;
-                }}>
+            <div class="collapsible-header">
               <i class="material-icons" >source</i> Sample Source
             </div>
-            <div class="collapsible-body " style={{ display: this.isSearchExpanded ? "block" : "none" }}>
+            <div class="collapsible-body " >
               
               <input type="text" id="search" placeholder="Search Sample Source" 
                ><span class="material-icons" >search</span></input>

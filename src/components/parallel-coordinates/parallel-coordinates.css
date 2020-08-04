@@ -66,7 +66,7 @@
 }
 .main {
   display: grid;
-  grid-template-columns: 20% 80%;
+  grid-template-columns: 25% 75%;
   grid-row: 2 / 3
  
 }
@@ -193,6 +193,3 @@ button#exclude-data:hover {
   color: #900;
 }
 
-#compute-list> li.rack> .collapsible-body {
-  display: block;
-}
